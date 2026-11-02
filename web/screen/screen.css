@@ -5,6 +5,13 @@
  * 保证在 1920×1080 / 3840×2160 等分辨率下与原型 1:1 对齐。
  */
 
+/* 手写体姓名（龙藏体，SIL OFL 开源授权）：没有手写签名图片时用它显示姓名 */
+@font-face {
+  font-family: "SignHand";
+  src: url("fonts/hand-longcang.woff2") format("woff2");
+  font-display: swap;
+}
+
 @font-face {
   font-family: "TitleBrush";
   src: url("fonts/title-mashanzheng.woff2") format("woff2");
@@ -348,6 +355,23 @@ body {
   stroke-width: 2.2;
   stroke-linejoin: round;
   filter: url(#lexue-glow);
+}
+
+/* ---------- 特效层 ---------- */
+.fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 722px;
+  pointer-events: none;
+}
+
+.count-value.bump { animation: count-bump 0.9s ease-out; }
+@keyframes count-bump {
+  0%   { text-shadow: 0 0 10px rgba(140, 200, 255, 0.55); }
+  30%  { text-shadow: 0 0 16px rgba(255, 214, 120, 0.95), 0 0 4px rgba(255, 240, 200, 0.9); }
+  100% { text-shadow: 0 0 10px rgba(140, 200, 255, 0.55); }
 }
 
 /* ---------- 调试：原型叠加对比（按 O 切换） ---------- */
