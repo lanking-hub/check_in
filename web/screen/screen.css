@@ -1,0 +1,380 @@
+/*
+ * 大屏端样式
+ * 设计稿基准：1280 × 722（原型图原始尺寸）
+ * 所有坐标直接使用设计稿像素，整体用 transform: scale 等比缩放到任意屏幕，
+ * 保证在 1920×1080 / 3840×2160 等分辨率下与原型 1:1 对齐。
+ */
+
+@font-face {
+  font-family: "TitleBrush";
+  src: url("fonts/title-mashanzheng.woff2") format("woff2");
+  font-display: block;
+}
+
+@font-face {
+  font-family: "SerifSC";
+  src: url("fonts/serif-sc-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "SerifSC";
+  src: url("fonts/serif-sc-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: block;
+}
+
+:root {
+  --stage-w: 1280px;
+  --stage-h: 722px;
+
+  --navy-900: #0B2A66;
+  --navy-700: #1A4A9C;
+  --navy-500: #2E6BD0;
+  --ice-50: #EEF6FF;
+  --ice-200: #CFE4FA;
+  --gold-300: #F7DE9C;
+  --gold-500: #E8BE5E;
+  --gold-700: #C9932F;
+  --text-ice: #DCEBFA;
+
+  --glass-fill: rgba(34, 86, 170, 0.42);
+  --glass-edge: rgba(186, 220, 255, 0.85);
+  --glass-edge-soft: rgba(186, 220, 255, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #07183F;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 舞台：固定设计尺寸，按屏幕等比缩放 ---------- */
+.stage {
+  position: relative;
+  flex: none;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  transform-origin: center center;
+  overflow: hidden;
+  font-family: "SerifSC", "Songti SC", "STSong", "SimSun", serif;
+  color: var(--text-ice);
+  user-select: none;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- 顶部标题 ----------
+ * 每个字按原型墨迹包围盒单独定位（left = 笔画原点 x，top = 基线 y），
+ * 字号来自对原型逐字测量后的反算，保证字距与原型一致。
+ */
+.title {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  font-family: "TitleBrush", "STKaiti", "KaiTi", serif;
+  font-weight: 400;
+  line-height: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 0.8px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 1.6px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 2px 2.5px rgba(16, 50, 130, 0.35));
+}
+
+.title .g {
+  position: absolute;
+  display: block;
+  line-height: 1;
+  /* top 写的是基线 y：用 translateY(-0.88em) 把基线对齐到该位置；
+     原型字形比 MaShanZheng 略宽略高，以字中心为原点做轻微拉伸 */
+  transform-origin: 50% 60%;
+  transform: translateY(-0.88em) scale(var(--sx, 1.1), 1.06);
+  color: #0D3685;
+}
+
+.title .dot {
+  position: absolute;
+  left: 720px;
+  top: 39px;
+  width: 11px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0E3A8C;
+}
+
+/* ---------- 副标题胶囊 ---------- */
+.subtitle {
+  position: absolute;
+  left: 425px;
+  top: 92px;
+  width: 444px;
+  height: 42px;
+}
+
+.subtitle svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.subtitle span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: 6px;
+  text-indent: 6px;
+  color: #F4FAFF;
+  text-shadow: 0 0 6px rgba(160, 210, 255, 0.55);
+}
+
+/* ---------- 左侧玻璃卡片（通用） ---------- */
+.card {
+  position: absolute;
+}
+
+.card > svg.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.card-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 2.4px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E3F0FF 55%, #C9DCF2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(5, 25, 70, 0.55));
+}
+
+.laurel {
+  position: absolute;
+  width: 20px;
+  height: 22px;
+}
+
+.laurel.right { transform: scaleX(-1); }
+
+.head-rule {
+  position: absolute;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(200, 228, 255, 0) 0%,
+    rgba(200, 228, 255, 0.55) 18%,
+    rgba(220, 238, 255, 0.75) 50%,
+    rgba(200, 228, 255, 0.55) 82%,
+    rgba(200, 228, 255, 0) 100%);
+}
+
+/* ---------- 卡片 1：扫码签到 ---------- */
+.card-scan {
+  left: 18px;
+  top: 150px;
+  width: 250px;
+  height: 272px;
+}
+
+.card-scan .card-head { top: 10px; height: 24px; }
+.card-scan .laurel.left { left: 26px; top: 20px; }
+.card-scan .laurel.right { right: 26px; top: 20px; }
+.card-scan .head-rule { left: 36px; right: 36px; top: 44px; }
+
+.qr-wrap {
+  position: absolute;
+  left: 53px;
+  top: 64px;
+  width: 144px;
+  height: 136px;
+}
+
+.qr-box {
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  width: 135px;
+  height: 127px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: #FFFFFF;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+
+.qr-box canvas {
+  width: 112px;
+  height: 112px;
+  image-rendering: pixelated;
+}
+
+.qr-wrap svg.brackets {
+  position: absolute;
+  left: -8px;
+  top: -6px;
+  width: 160px;
+  height: 151px;
+  overflow: visible;
+}
+
+.scan-tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 218px;
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 19px;
+  letter-spacing: 0.8px;
+  color: #E4EFFB;
+  text-shadow: 0 1px 2px rgba(5, 25, 70, 0.55);
+}
+
+/* ---------- 卡片 2：实时签到人数 ---------- */
+.card-count {
+  left: 12px;
+  top: 440px;
+  width: 248px;
+  height: 131px;
+}
+
+.card-count .card-head { top: 11px; height: 26px; gap: 9px; }
+.card-count .laurel.left { left: 16px; top: 21px; }
+.card-count .laurel.right { right: 16px; top: 21px; }
+.card-count .head-rule { left: 32px; right: 32px; top: 43px; }
+
+.count-box {
+  position: absolute;
+  left: 45px;
+  top: 53px;
+  width: 190px;
+  height: 66px;
+  border-radius: 6px;
+  border: 1px solid rgba(170, 205, 245, 0.32);
+  border-right-color: rgba(170, 205, 245, 0.12);
+  border-bottom-color: rgba(170, 205, 245, 0.12);
+  background: linear-gradient(180deg, rgba(14, 50, 120, 0.42) 0%, rgba(20, 62, 138, 0.28) 100%);
+}
+
+/* 数字与“人”作为一组在框内水平、垂直居中，位数变化时也保持居中 */
+.count-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 9px;
+}
+
+.count-value {
+  font-family: "DIN Alternate", "Bahnschrift", "Roboto Condensed", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  color: #FFFFFF;
+  text-shadow: 0 0 10px rgba(140, 200, 255, 0.55);
+}
+
+.count-unit {
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
+  color: #EAF3FD;
+}
+
+/* ---------- 书页上的“乐学”（矢量描边，可做沙粒特效锚点） ---------- */
+.lexue {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.lexue .glyph {
+  fill-rule: evenodd;
+  fill: rgba(255, 246, 228, 0.18);
+  stroke: url(#lexue-stroke);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  filter: url(#lexue-glow);
+}
+
+/* ---------- 调试：原型叠加对比（按 O 切换） ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+body.show-overlay .overlay { opacity: 0.5; }
+body.overlay-diff .overlay { opacity: 1; mix-blend-mode: difference; }
+
+.debug-hint {
+  position: fixed;
+  right: 12px;
+  bottom: 10px;
+  z-index: 10;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 12px/1.5 -apple-system, "PingFang SC", sans-serif;
+  display: none;
+}
+
+body.debug .debug-hint { display: block; }

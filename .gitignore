@@ -38,3 +38,6 @@ logs/
 
 # Local tooling
 .workbuddy/
+
+# 本地生成的对比/预览截图
+design/preview/
