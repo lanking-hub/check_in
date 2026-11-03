@@ -12,14 +12,43 @@
   <header class="head">
     <p class="eyebrow">校园智慧参观</p>
     <h1>汇聚星光 · 点亮乐学</h1>
-    <p class="sub">写下你的名字,让它在书页上亮起来</p>
+    <p class="sub">写下你的名字，让它在书页上亮起来</p>
   </header>
 
   <form id="form" class="card" autocomplete="off">
     <label class="field">
       <span class="label">你的称呼 <i>必填</i></span>
-      <input id="name" name="name" type="text" maxlength="12" placeholder="如:张老师" required>
+      <input id="name" name="name" type="text" maxlength="12" placeholder="如：张老师" required>
     </label>
+
+    <details class="more">
+      <summary>补充信息（选填，可留空）</summary>
+      <div class="more-body">
+        <label class="field">
+          <span class="label">单位</span>
+          <input id="unit" name="unit" type="text" maxlength="30" placeholder="如：教育局">
+        </label>
+        <label class="field">
+          <span class="label">来访类型</span>
+          <select id="type" name="type">
+            <option value="">不填</option>
+            <option>领导</option>
+            <option>教师</option>
+            <option>学生</option>
+            <option>家长</option>
+            <option>其他</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="label">分组</span>
+          <input id="group" name="group" type="text" maxlength="20" placeholder="如：第一组">
+        </label>
+        <label class="field">
+          <span class="label">参观路线</span>
+          <input id="route" name="route" type="text" maxlength="30" placeholder="如：A 线">
+        </label>
+      </div>
+    </details>
 
     <div class="field">
       <span class="label">手写签名 <i class="opt">可不签</i></span>
@@ -37,17 +66,21 @@
     <p class="err" id="err" role="alert"></p>
   </form>
 
-  <section class="done" id="done" hidden>
-    <p class="done-mark">✓</p>
-    <h2>签到成功</h2>
-    <p>请看大屏,你的名字正在落进「乐学」里。</p>
-    <button type="button" class="link" id="again">再改一次</button>
+  <section class="pass" id="pass" hidden>
+    <div class="pass-head">
+      <h2>签到成功</h2>
+      <p>你的通行证已生成，长按图片或点下面的按钮保存</p>
+    </div>
+    <canvas id="passCanvas" class="pass-canvas" width="750" height="1180"></canvas>
+    <button type="button" class="submit" id="save">保存到手机</button>
+    <p class="pass-hint" id="saveHint"></p>
   </section>
 
   <footer class="foot">
-    仅用于本次参观签到,记录含昵称与签名,可随时申请删除。
+    仅用于本次参观签到，记录含昵称与签名，可随时申请删除。
   </footer>
 </main>
+<script src="../shared/vendor/qrcode.js"></script>
 <script src="phone.js"></script>
 </body>
 </html>

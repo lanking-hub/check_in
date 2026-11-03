@@ -184,6 +184,10 @@
             if (typeof msg.count === 'number') setCount(msg.count, true);
           }
           break;
+        case 'update':
+          // 有人改了自己的签名：只给一次柔和金光，不重播名字、人数不变
+          fx.flash();
+          break;
         case 'remove':
           if (typeof msg.count === 'number') setCount(msg.count, true);
           break;

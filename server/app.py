@@ -31,6 +31,7 @@ import secrets
 import sqlite3
 import threading
 import time
+from html import escape
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
@@ -38,7 +39,7 @@ from urllib.parse import quote
 
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
@@ -54,6 +55,7 @@ PORT = int(os.environ.get("CHECKIN_PORT") or 8000)
 MAX_NAME = 12          # 昵称最长字符数
 MAX_SIG_BYTES = 1_200_000   # 单张签名图解码后上限，约 1.2MB
 RATE_LIMIT = 12        # 同一 IP 每 60 秒最多提交次数
+DEBOUNCE_MS = 5000     # 同一设备的重复提交在这个时间窗内视为手滑
 HEARTBEAT_S = 20       # 服务端心跳间隔，客户端超时用它判断断线
 
 for p in (DATA, MEDIA):
@@ -398,10 +400,16 @@ async def signin(payload: dict, request: Request):
 
     exist = store.by_client(client) if client else None
     if exist:
-        # 同一设备重复提交 = 修改自己的记录：保留原 id 与时间，不重复上墙
-        rec = store.update(exist["id"], **data) or exist
-        await hub.broadcast({"type": "update", "data": rec})
-        return {"ok": True, "updated": True, "item": rec}
+        now_ms = int(time.time() * 1000)
+        # 5 秒内又点了一次：多半是手滑，直接返回上次结果，不新增也不广播
+        if now_ms - exist["ts"] < DEBOUNCE_MS:
+            return {"ok": True, "duplicated": True, "item": exist}
+        # 同一台手机、同一个称呼：当作“改自己的签名”，更新原记录，不重复上墙
+        if exist["name"] == name:
+            rec = store.update(exist["id"], **data) or exist
+            await hub.broadcast({"type": "update", "data": rec})
+            return {"ok": True, "updated": True, "item": rec}
+        # 同一台手机、换了称呼：另一个人（现场共用手机的情况），按新人处理
 
     rec = store.add(client=client, ip=ip, **data)
     await hub.broadcast({"type": "signin", "data": rec, "count": store.count()})
@@ -461,6 +469,46 @@ async def public_config(request: Request):
     if not base:
         base = str(request.base_url).rstrip("/")
     return {"phoneUrl": base + "/phone/", "serverTime": int(time.time() * 1000)}
+
+
+@app.get("/card/{sid}", response_class=HTMLResponse)
+async def card_page(sid: str):
+    """身份牌二维码扫开的核验页：只展示这张牌的基本信息，不含签名原图。"""
+    rec = store.by_id(sid)
+    if not rec:
+        return HTMLResponse(
+            "<!doctype html><meta charset=utf-8><title>无效通行证</title>"
+            "<div style=\"font-family:system-ui;padding:40px;text-align:center;color:#556\">"
+            "<h2>这张通行证不存在或已失效</h2><p>请向签到台确认。</p></div>",
+            status_code=404,
+        )
+    when = time.strftime("%Y-%m-%d %H:%M", time.localtime(rec["ts"] / 1000))
+    rows = "".join(
+        f"<tr><th>{label}</th><td>{escape(value)}</td></tr>"
+        for label, value in (
+            ("昵称", rec["name"]),
+            ("单位", rec["unit"]),
+            ("来访类型", rec["type"]),
+            ("分组", rec["group"]),
+            ("参观路线", rec["route"]),
+            ("签到时间", when),
+        )
+        if value
+    )
+    return HTMLResponse(
+        "<!doctype html><meta charset=utf-8>"
+        "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
+        "<title>通行证核验</title>"
+        "<style>body{margin:0;background:#0B1E45;color:#F4F7FD;font-family:system-ui,"
+        "\"PingFang SC\",sans-serif}.box{max-width:420px;margin:0 auto;padding:32px 22px}"
+        "h1{font-size:19px;letter-spacing:2px;margin:0 0 6px;color:#FFF6E2}"
+        ".ok{font-size:12px;color:#E3B25A;letter-spacing:2px;margin:0 0 24px}"
+        "table{width:100%;border-collapse:collapse;font-size:14px}"
+        "th{text-align:left;font-weight:400;color:rgba(238,244,255,.55);width:88px;"
+        "padding:11px 0;vertical-align:top}td{padding:11px 0;border-bottom:1px solid rgba(255,255,255,.08)}"
+        "</style><div class=box><h1>入校通行证核验</h1>"
+        "<p class=ok>VERIFIED · 当日有效</p><table>" + rows + "</table></div>"
+    )
 
 
 @app.websocket("/ws")

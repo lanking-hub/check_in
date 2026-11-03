@@ -265,6 +265,11 @@
     sparks.length = 0;
   }
 
+  // 单独亮一次金光，不播放名字、不改人数（有人更新了自己的记录时用）
+  function flash() {
+    pulses.push(clock);
+  }
+
   // 清空全部沙粒与在途动画（管理端“一键清空”时用）
   function reset() {
     settled = new Array(pool.length);
@@ -475,5 +480,5 @@
     for (var i = 0; i < (n || 1); i++) arrive({ name: names[i % names.length] });
   }
 
-  window.SignFx = { arrive: arrive, prefill: prefill, mock: mock, simulate: simulate, reset: reset, ready: ready };
+  window.SignFx = { arrive: arrive, prefill: prefill, mock: mock, simulate: simulate, reset: reset, flash: flash, ready: ready };
 })();
