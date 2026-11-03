@@ -68,8 +68,59 @@ python3 -m venv .venv
 ## 部署要点
 
 - 大陆服务器未备案时只能用非标端口（如 8000）直接用 IP 访问；页面不调用摄像头，HTTP 即可
-- 进程守护：Linux 用 systemd，Windows 用 pm2 或 nssm，并设置开机自启
 - 反向代理放在同机时，要允许 WebSocket 升级并放宽读超时，否则长连接会被切断
+- 必须单 worker 运行（`--workers 1`），WebSocket 连接表在进程内存里
+
+### 服务开机自启（Linux）
+
+新建 `/etc/systemd/system/checkin.service`：
+
+```ini
+[Unit]
+Description=签到墙服务
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/check_in
+Environment=CHECKIN_PORT=8000
+Environment=CHECKIN_PUBLIC_URL=http://<公网IP>:8000
+ExecStart=/srv/check_in/.venv/bin/python server/app.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now checkin     # 开机自启并立即启动
+sudo systemctl status checkin           # 看是否在跑
+journalctl -u checkin -f                # 看日志（启动时会打印管理口令）
+```
+
+Windows 上用「任务计划程序」建一个「计算机启动时」触发的任务，程序填 `python.exe`，参数填 `server\app.py`，起始位置填项目目录即可。
+
+### 大屏不睡屏
+
+前端已经申请了浏览器的屏幕常亮，但**只在 HTTPS 或本机访问时生效**，用 `http://IP:端口` 访问时浏览器会拒绝。现场要靠系统设置：
+
+1. Windows 设置 → 系统 → 电源：**屏幕和睡眠都设成「从不」**
+2. 关闭屏幕保护程序
+3. 演示前手动唤醒一次，确认整场不会熄屏
+
+### 大屏开机自动全屏打开浏览器
+
+把下面的命令做成快捷方式，放进启动文件夹（`Win + R` 输入 `shell:startup`）：
+
+```bat
+msedge.exe --kiosk --no-first-run --disable-features=TranslateUI "http://<公网IP>:8000/screen/" --edge-kiosk-type=fullscreen
+```
+
+`--kiosk` 会全屏、隐藏地址栏和工具栏，再配合 Windows 的「分配访问」还能把它锁成专用机（只能开这一个页面），不会被误操作退出。
+
+这一步需要能操作那台一体机，通常归学校信息中心管。
 
 ## 协作
 

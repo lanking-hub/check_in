@@ -241,6 +241,33 @@
     });
   }
 
+  /* ---------- 屏幕常亮 ---------- */
+  /**
+   * 请求屏幕常亮，避免演示中途熄屏。
+   * 注意：浏览器只在 HTTPS 或本机访问时才允许这个接口；
+   * 现场用 http://IP:端口 访问时会失效，那种情况下仍要靠 Windows 的电源设置。
+   */
+  var wakeLock = null;
+
+  async function keepAwake() {
+    if (!('wakeLock' in navigator) || document.hidden) return;
+    try {
+      if (!wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', function () { wakeLock = null; });
+      }
+    } catch (e) {
+      wakeLock = null;
+    }
+  }
+
+  keepAwake();
+  // 切回前台、以及锁因为系统原因被释放后，重新申请
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) keepAwake();
+  });
+  setInterval(keepAwake, 60000);
+
   /* ---------- 调试叠图 ---------- */
   if (debug) {
     document.body.classList.add('debug');
