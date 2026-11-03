@@ -203,7 +203,8 @@
     if (!rec || !rec.name) return;
     var item = { name: String(rec.name).slice(0, 10) };
     // 人数以“收到签到”为准立即 +1；动画排队或错开不影响数字
-    if (window.Screen && window.Screen.addCount) window.Screen.addCount(1);
+    // silent：接后端时人数以服务端返回的 count 为准，避免重复计数
+    if (!rec.silent && window.Screen && window.Screen.addCount) window.Screen.addCount(1);
     if (rec.sig && typeof rec.sig === 'string') {
       var im = new Image();
       im.onload = function () { item.sigImage = im; queue.push(item); };
@@ -262,6 +263,19 @@
       settle({ ti: ti, tx: pool[ti].x, ty: pool[ti].y }, -1e9);
     }
     sparks.length = 0;
+  }
+
+  // 清空全部沙粒与在途动画（管理端“一键清空”时用）
+  function reset() {
+    settled = new Array(pool.length);
+    queue.length = 0;
+    active.length = 0;
+    sparks.length = 0;
+    pulses.length = 0;
+    slotBusy = SLOTS.map(function () { return false; });
+    slotFreeAt = SLOTS.map(function () { return 0; });
+    nextStartAt = 0;
+    poolCursor = 0;
   }
 
   /* ---------- 绘制 ---------- */
@@ -461,5 +475,5 @@
     for (var i = 0; i < (n || 1); i++) arrive({ name: names[i % names.length] });
   }
 
-  window.SignFx = { arrive: arrive, prefill: prefill, mock: mock, simulate: simulate, ready: ready };
+  window.SignFx = { arrive: arrive, prefill: prefill, mock: mock, simulate: simulate, reset: reset, ready: ready };
 })();

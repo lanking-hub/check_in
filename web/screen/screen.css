@@ -374,6 +374,25 @@ body {
   100% { text-shadow: 0 0 10px rgba(140, 200, 255, 0.55); }
 }
 
+/* ---------- 断线提示（不遮挡内容，恢复后自动消失） ---------- */
+.net {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  padding: 6px 14px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #FFE7CD;
+  background: rgba(120, 32, 24, 0.78);
+  border: 1px solid rgba(255, 200, 150, 0.45);
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.net.show { opacity: 1; transform: none; }
+
 /* ---------- 调试：原型叠加对比（按 O 切换） ---------- */
 .overlay {
   position: absolute;

@@ -44,3 +44,8 @@ design/preview/
 
 # 任务分配表（含内部人员信息，不入库）
 技术攻坚-初分配-项目说明.csv
+
+# 后端
+.venv/
+__pycache__/
+server/data/

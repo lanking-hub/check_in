@@ -16,6 +16,9 @@
   var params = new URLSearchParams(location.search);
   var debug = params.get('debug') === '1';
 
+  // 用 http(s) 打开就自动接后端；file:// 直接双击打开或加 ?live=0 时，保持纯前端演示
+  var live = (location.protocol === 'http:' || location.protocol === 'https:') && params.get('live') !== '0';
+
   /* ---------- 等比缩放 ---------- */
   function fit() {
     var s = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H);
@@ -65,6 +68,14 @@
 
   drawQr(phoneUrl());
 
+  // 有后端时用后端给的地址生成二维码：换部署地址不用改代码
+  if (live && !params.get('qr')) {
+    fetch('/api/config')
+      .then(function (r) { return r.json(); })
+      .then(function (cfg) { if (cfg && cfg.phoneUrl) drawQr(cfg.phoneUrl); })
+      .catch(function () {});
+  }
+
   /* ---------- 签到人数（缓动计数，不跳变） ---------- */
   var countEl = document.getElementById('count');
   var countNow = 0;      // 当前显示值
@@ -109,7 +120,7 @@
   /* ---------- 签到特效 ---------- */
   var fx = window.SignFx;
   if (fx) {
-    fx.prefill(initial); // 刷新后按已有人数铺好沙粒
+    if (!live) fx.prefill(initial); // 纯前端模式：按 URL 里的人数先铺好沙粒
     // 彩排：按 S 或空格模拟 1 人签到，按 M 模拟 3 人同时签到；?demo=1 自动循环演示
     window.addEventListener('keydown', function (e) {
       if (e.key === 's' || e.key === 'S' || e.key === ' ') { e.preventDefault(); fx.mock(1); }
@@ -128,6 +139,102 @@
         setTimeout(loop, 6000 + Math.random() * 4000);
       })();
     }
+
+    if (live) startLive();
+  }
+
+  /* ---------- 接后端：拉全量 + WebSocket 订阅 ---------- */
+
+  /**
+   * 断线不影响已显示内容：页面不刷新，只把“已断开”角标亮出来，后台自动重连。
+   * 重连成功后拉一次 /api/state 补齐断线期间漏掉的签到。
+   */
+  function startLive() {
+    var badge = document.getElementById('net');
+    var ws = null;
+    var retry = 0;
+    var lastMsg = 0;
+    var timer = 0;
+
+    function setOffline(on) {
+      if (badge) badge.classList.toggle('show', on);
+      document.body.classList.toggle('offline', on);
+    }
+
+    function sync() {
+      fetch('/api/state')
+        .then(function (r) { return r.json(); })
+        .then(function (st) {
+          setCount(st.count || 0, false);
+          if (fx) { fx.reset(); fx.prefill(st.count || 0); }
+        })
+        .catch(function () {});
+    }
+
+    function onMessage(msg) {
+      var d = msg.data;
+      switch (msg.type) {
+        case 'hello':
+          // 首次连上或重连成功：以服务端数据为准重建画面
+          sync();
+          break;
+        case 'signin':
+          if (d && d.name) {
+            fx.arrive({ name: d.name, sig: d.sig || '', silent: true });
+            if (typeof msg.count === 'number') setCount(msg.count, true);
+          }
+          break;
+        case 'remove':
+          if (typeof msg.count === 'number') setCount(msg.count, true);
+          break;
+        case 'clear':
+          fx.reset();
+          setCount(0, false);
+          break;
+      }
+    }
+
+    function connect() {
+      var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(proto + '//' + location.host + '/ws?role=screen');
+
+      ws.onopen = function () {
+        retry = 0;
+        lastMsg = Date.now();
+        setOffline(false);
+      };
+      ws.onmessage = function (ev) {
+        lastMsg = Date.now();
+        var msg;
+        try { msg = JSON.parse(ev.data); } catch (e) { return; }
+        onMessage(msg);
+      };
+      ws.onclose = function () {
+        setOffline(true);
+        retry = Math.min(retry + 1, 6);
+        timer = setTimeout(connect, Math.min(8000, 600 * Math.pow(1.8, retry)));
+      };
+      ws.onerror = function () { try { ws.close(); } catch (e) {} };
+    }
+
+    // 心跳：每 20 秒 ping 一次；超过 50 秒收不到任何消息就当作断线，主动重连
+    setInterval(function () {
+      if (ws && ws.readyState === 1) {
+        try { ws.send('ping'); } catch (e) {}
+        if (lastMsg && Date.now() - lastMsg > 50000) { try { ws.close(); } catch (e) {} }
+      }
+    }, 20000);
+
+    connect();
+
+    // 回到前台时如果连接已断，立刻重连，不用等退避计时
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && (!ws || ws.readyState > 1)) {
+        clearTimeout(timer);
+        retry = 0;
+        connect();
+      }
+    });
   }
 
   /* ---------- 调试叠图 ---------- */

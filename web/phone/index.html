@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1E45">
+<title>签到 · 汇聚星光 点亮乐学</title>
+<link rel="stylesheet" href="phone.css">
+</head>
+<body>
+<main class="app">
+  <header class="head">
+    <p class="eyebrow">校园智慧参观</p>
+    <h1>汇聚星光 · 点亮乐学</h1>
+    <p class="sub">写下你的名字,让它在书页上亮起来</p>
+  </header>
+
+  <form id="form" class="card" autocomplete="off">
+    <label class="field">
+      <span class="label">你的称呼 <i>必填</i></span>
+      <input id="name" name="name" type="text" maxlength="12" placeholder="如:张老师" required>
+    </label>
+
+    <div class="field">
+      <span class="label">手写签名 <i class="opt">可不签</i></span>
+      <div class="pad" id="pad">
+        <canvas id="sig"></canvas>
+        <p class="pad-hint" id="padHint">在此处签名</p>
+      </div>
+      <div class="pad-tools">
+        <button type="button" class="link" id="undo">撤回一笔</button>
+        <button type="button" class="link" id="clear">清空重签</button>
+      </div>
+    </div>
+
+    <button type="submit" class="submit" id="submit">提交签到</button>
+    <p class="err" id="err" role="alert"></p>
+  </form>
+
+  <section class="done" id="done" hidden>
+    <p class="done-mark">✓</p>
+    <h2>签到成功</h2>
+    <p>请看大屏,你的名字正在落进「乐学」里。</p>
+    <button type="button" class="link" id="again">再改一次</button>
+  </section>
+
+  <footer class="foot">
+    仅用于本次参观签到,记录含昵称与签名,可随时申请删除。
+  </footer>
+</main>
+<script src="phone.js"></script>
+</body>
+</html>
