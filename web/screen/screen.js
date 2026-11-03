@@ -72,7 +72,12 @@
   if (live && !params.get('qr')) {
     fetch('/api/config')
       .then(function (r) { return r.json(); })
-      .then(function (cfg) { if (cfg && cfg.phoneUrl) drawQr(cfg.phoneUrl); })
+      .then(function (cfg) {
+        if (!cfg || !cfg.phoneUrl) return;
+        drawQr(cfg.phoneUrl);
+        var addrEl = document.getElementById('scanAddr');
+        if (addrEl) addrEl.textContent = cfg.phoneUrl.replace(/^https?:\/\//, '');
+      })
       .catch(function () {});
   }
 

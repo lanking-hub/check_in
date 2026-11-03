@@ -270,6 +270,23 @@ body {
   overflow: visible;
 }
 
+/* 二维码下方的小字地址：正常视角几乎看不见，主要给现场工作人员应急用 */
+.scan-addr {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 252px;
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  line-height: 12px;
+  letter-spacing: 0.2px;
+  color: rgba(226, 236, 252, 0.45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .scan-tip {
   position: absolute;
   left: 0;
