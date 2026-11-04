@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# 签到墙云服务器一键部署脚本（阿里云轻量 · Ubuntu）
+# 签到墙云服务器一键部署脚本
+# 支持：Ubuntu / Debian（apt）、Alibaba Cloud Linux / CentOS / Anolis / Rocky（dnf/yum）
 #
-# 用法：把项目传到服务器后，在仓库根目录执行
-#   PUBLIC_URL=http://<公网IP>:8000 bash deploy/setup-server.sh
-# PUBLIC_URL 不传则自动探测公网 IP，拼成 http://IP:8000
+# 用法：项目传到服务器后，在仓库根目录执行
+#   sudo bash deploy/setup-server.sh
+# 可选 PUBLIC_URL=http://IP:8000 显式写死对外地址；默认不写死，二维码自动跟随
+# 访问地址，换服务器/换 IP 零配置（镜像化部署推荐保持默认）。
 # 需 root 运行。幂等：重复执行会更新服务并重启。
 
 set -euo pipefail
@@ -17,29 +19,64 @@ PYPI_MIRROR="https://mirrors.aliyun.com/pypi/simple/"
 
 echo "==> 项目目录: $APP_DIR"
 
-# ---- 0. 基础工具 -----------------------------------------------------------
-apt-get update -qq
-apt-get install -y -qq curl ca-certificates git >/dev/null
-
-# ---- 1. 确保 Python ≥ 3.11（Ubuntu 24.04 自带 3.12；22.04 走 deadsnakes）---
-PY=python3
-ver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-need_install=0
-case "$ver" in
-  3.11|3.12|3.13) ;;
-  *) need_install=1 ;;
-esac
-if [ "$need_install" = 1 ]; then
-  echo "==> 系统 Python($ver) 过旧，安装 Python 3.12（deadsnakes）"
-  apt-get install -y -qq software-properties-common >/dev/null
-  add-apt-repository -y ppa:deadsnakes/ppa >/dev/null
-  apt-get update -qq
-  apt-get install -y -qq python3.12 python3.12-venv >/dev/null
-  PY=python3.12
-else
-  apt-get install -y -qq "python${ver}-venv" >/dev/null 2>&1 || apt-get install -y -qq python3-venv >/dev/null
+# ---- 0. 包管理器与基础工具 ---------------------------------------------------
+if   command -v apt-get >/dev/null 2>&1; then PKG=apt
+elif command -v dnf     >/dev/null 2>&1; then PKG=dnf
+elif command -v yum     >/dev/null 2>&1; then PKG=yum
+else echo "!! 未识别的包管理器（需要 apt-get / dnf / yum）"; exit 1
 fi
-echo "==> 使用 $PY $($PY --version)"
+echo "==> 包管理器: $PKG"
+
+pkg_install() {
+  case "$PKG" in
+    apt) apt-get update -qq && apt-get install -y -qq "$@" >/dev/null ;;
+    dnf) dnf install -y -q "$@" >/dev/null ;;
+    yum) yum install -y -q "$@" >/dev/null ;;
+  esac
+}
+
+pkg_install curl ca-certificates git
+
+# ---- 1. 确保 Python ≥ 3.11 ---------------------------------------------------
+find_py() {
+  local c v
+  for c in python3.13 python3.12 python3.11; do
+    command -v "$c" >/dev/null 2>&1 && { echo "$c"; return 0; }
+  done
+  if command -v python3 >/dev/null 2>&1; then
+    v="$(python3 -c 'import sys; print("%d.%d" % (sys.version_info.major, sys.version_info.minor))')"
+    case "$v" in 3.11|3.12|3.13) echo python3; return 0 ;; esac
+  fi
+  return 1
+}
+
+install_miniforge() {
+  echo "==> 系统源没有 Python 3.11+，用 Miniforge 兜底（清华镜像，国内快）"
+  curl -fsSL -o /tmp/miniforge3.sh \
+    "https://mirrors.tuna.tsinghua.edu.cn/github-release/conda-forge/miniforge/LatestRelease/Miniforge3-Linux-x86_64.sh"
+  bash /tmp/miniforge3.sh -b -p /opt/miniforge3 >/dev/null
+}
+
+PY="$(find_py || true)"
+if [ -z "$PY" ]; then
+  echo "==> 未找到 Python ≥ 3.11，尝试从系统源安装"
+  case "$PKG" in
+    apt)
+      pkg_install software-properties-common
+      add-apt-repository -y ppa:deadsnakes/ppa >/dev/null
+      pkg_install python3.12 python3.12-venv || pkg_install python3.11 python3.11-venv || true
+      ;;
+    *)
+      pkg_install python3.12 || pkg_install python3.11 || true
+      ;;
+  esac
+  PY="$(find_py || true)"
+fi
+if [ -z "$PY" ]; then
+  install_miniforge
+  PY=/opt/miniforge3/bin/python
+fi
+echo "==> Python: $PY ($($PY --version 2>&1))"
 
 # ---- 2. 对外地址 -------------------------------------------------------------
 # 显式传 PUBLIC_URL 时写进 systemd；不传则不写，二维码地址由应用按访问 Host
@@ -55,18 +92,31 @@ else
 fi
 echo "==> 对外地址: $DISPLAY_URL"
 
-# ---- 3. 虚拟环境与依赖 ------------------------------------------------------
+# ---- 3. 虚拟环境与依赖 --------------------------------------------------------
 cd "$APP_DIR"
-[ -d .venv ] || "$PY" -m venv .venv
-./.venv/bin/pip install -q --upgrade pip -i "$PYPI_MIRROR"
+if ! "$PY" -m venv .venv 2>/dev/null || [ ! -x .venv/bin/python ]; then
+  echo "==> 系统 Python 建不了 venv（缺 ensurepip），改用 Miniforge"
+  install_miniforge
+  PY=/opt/miniforge3/bin/python
+  rm -rf .venv
+  "$PY" -m venv .venv
+fi
 echo "==> 安装依赖（阿里云 PyPI 镜像）"
+./.venv/bin/pip install -q --upgrade pip -i "$PYPI_MIRROR"
 ./.venv/bin/pip install -q -r server/requirements.txt -i "$PYPI_MIRROR"
 
-# ---- 4. 运行用户与权限 ------------------------------------------------------
+# ---- 4. 运行用户与权限 --------------------------------------------------------
 id -u "$RUN_USER" >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin "$RUN_USER"
 chown -R "$RUN_USER":"$RUN_USER" "$APP_DIR"
 
-# ---- 5. systemd 服务 --------------------------------------------------------
+# ---- 5. 系统防火墙（firewalld 在跑的话顺手放行；阿里云控制台安全组仍需人工）----
+if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+  firewall-cmd --permanent --add-port=8000/tcp >/dev/null
+  firewall-cmd --reload >/dev/null
+  echo "==> 系统防火墙(firewalld)已放行 TCP 8000"
+fi
+
+# ---- 6. systemd 服务 ----------------------------------------------------------
 cat > "/etc/systemd/system/${SVC}.service" <<EOF
 [Unit]
 Description=签到墙服务 (check_in)
@@ -88,7 +138,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "$SVC"
 
-# ---- 6. 健康检查 -------------------------------------------------------------
+# ---- 7. 健康检查 ---------------------------------------------------------------
 sleep 2
 if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then
   echo "==> 服务已启动，本机健康检查通过"
