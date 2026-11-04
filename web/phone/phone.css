@@ -200,6 +200,9 @@ select { appearance: none; background-image: none; }
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
+/* hidden 属性要压过上面的 display:block（canvas/img 切换用） */
+.pass-canvas[hidden] { display: none; }
+
 .pass-hint {
   min-height: 18px;
   margin: 10px 0 0;

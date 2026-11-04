@@ -15,8 +15,10 @@
   var submitBtn = document.getElementById('submit');
   var passEl = document.getElementById('pass');
   var passCanvas = document.getElementById('passCanvas');
+  var passImg = document.getElementById('passImg');
   var saveBtn = document.getElementById('save');
   var saveHint = document.getElementById('saveHint');
+  var IS_WECHAT = /MicroMessenger/i.test(navigator.userAgent);
   var ctx = canvas.getContext('2d');
 
   var dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -297,7 +299,16 @@
     return new Promise(function (resolve) {
       var g = passCanvas.getContext('2d');
 
-      var go = function () { paint(g, item, sigDataUrl); resolve(); };
+      var go = function () {
+        paint(g, item, sigDataUrl);
+        // 微信的长按「保存图片」只认 <img>，对页面上的 <canvas> 经常不弹菜单：
+        // 画完立刻转成真图片顶上去，canvas 退到后台只当绘制底板（保存逻辑仍从它导出）
+        passImg.src = passCanvas.toDataURL('image/png');
+        passCanvas.hidden = true;
+        passImg.hidden = false;
+        if (IS_WECHAT) saveBtn.textContent = '微信内请长按上方图片保存';
+        resolve();
+      };
       if (emblemReady) return go();
 
       // 校徽没加载完就等它，最多 1.5 秒，不能让用户卡在空白
@@ -493,6 +504,11 @@
   saveBtn.addEventListener('click', function () {
     var name = (nameEl.value || '来宾').trim();
     saveHint.textContent = '';
+    // 微信 WebView 会拦截 <a download> 弹「不给下载」，别去碰它，直接引导长按
+    if (IS_WECHAT) {
+      saveHint.textContent = '微信会拦截下载：请长按上方通行证图片，选择「保存图片」';
+      return;
+    }
     if (!passCanvas.toBlob) {
       saveHint.textContent = '这个浏览器不支持直接保存，请长按图片选择「保存图片」';
       return;
